@@ -1,0 +1,93 @@
+# AArch64 multi-platform
+# Based on Kevin Mihelich <kevin@archlinuxarm.org> work
+
+pkgbase=linux-devel
+pkgname=linux-devel
+_desc="Linux Kernel for development"
+pkgver=1
+pkgrel=0
+arch=('any')
+url="http://www.kernel.org/"
+license=('GPL2')
+makedepends=()
+options=('!strip')
+source=('linux.preset'
+        '60-linux.hook'
+        '90-linux.hook')
+
+_srcname=$KDT_KERNEL_SOURCE
+_bldname=$KDT_KERNEL_BUILD
+
+prepare() {
+  cd $_srcname
+
+  echo "Setting version..."
+  ./scripts/setlocalversion --save-scmversion
+}
+
+build() {
+  cd ${_srcname}
+  make ${KDT_MAKE_FLAGS} ${KDT_BUILD_TARGETS}
+}
+
+_package() {
+  pkgdesc="The Development Linux Kernel and modules "
+  install=${pkgname}.install
+  depends=(coreutils kmod initramfs mkinitcpio)
+
+  cd ${_srcname}
+  local kernver=$(make ${KDT_MAKE_FLAGS} --no-print-directory kernelrelease)
+
+  cd ${_bldname}
+  local modulesdir="$pkgdir/usr/lib/modules/$kernver"
+
+  echo "Installing boot image and dtbs..."
+  install -Dm644 arch/$ARCH/boot/${KDT_KERNEL_TARGET} -t "${pkgdir}/boot/"
+  mv "${pkgdir}/boot/${KDT_KERNEL_TARGET}" "${pkgdir}/boot/${KDT_KERNEL_FILE}"
+  cd $_srcname
+  if [ "$KDT_DTB_PATH" != "" ]; then
+    make ${KDT_MAKE_FLAGS} INSTALL_DTBS_PATH="${pkgdir}/boot/${KDT_DTB_PATH}" dtbs_install
+  fi
+
+  echo "Installing boot image..."
+  # systemd expects to find the kernel here to allow hibernation
+  # https://github.com/systemd/systemd/commit/edda44605f06a41fb86b7ab8128dcf99161d2344
+  install -Dm644 ${_bldname}/arch/$ARCH/boot/${KDT_KERNEL_TARGET} "$modulesdir/vmlinuz"
+
+  # Used by mkinitcpio to name the kernel
+  echo "$pkgbase" | install -Dm644 /dev/stdin "$modulesdir/pkgbase"
+
+  echo "Installing modules..."
+  make ${KDT_MAKE_FLAGS} INSTALL_MOD_PATH="$pkgdir/usr" INSTALL_MOD_STRIP=1 modules_install &>/dev/null
+
+  # remove build and source links
+  rm "$modulesdir"/{source,build}
+
+  # sed expression for following substitutions
+  local _subst="
+    s|%PKGBASE%|${pkgbase}|g
+    s|%KERNVER%|${kernver}|g
+  "
+  # install mkinitcpio preset file
+  sed "${_subst}" ${pkgdir}/../../linux.preset |
+    install -Dm644 /dev/stdin "${pkgdir}/etc/mkinitcpio.d/${pkgbase}.preset"
+
+  # install pacman hooks
+  sed -e "s|splash|${pkgbase}-splash|g" "${srcdir}"/90-splash.hook |
+    install -Dm644 /dev/stdin "${pkgdir}/usr/share/libalpm/hooks/90-${pkgbase}.hook"
+  sed "${_subst}" "${srcdir}"/60-linux.hook |
+    install -Dm644 /dev/stdin "${pkgdir}/usr/share/libalpm/hooks/60-${pkgbase}.hook"
+  sed "${_subst}" "${srcdir}"/90-linux.hook |
+    install -Dm644 /dev/stdin "${pkgdir}/usr/share/libalpm/hooks/90-${pkgbase}.hook"
+
+  echo "Fixing permissions..."
+  chmod -Rc u=rwX,go=rX "$pkgdir"
+}
+
+pkgname=("${pkgbase}")
+for _p in "${pkgname[@]}"; do
+  eval "package_${_p}() {
+    $(declare -f "_package${_p#$pkgbase}")
+    _package${_p#${pkgbase}}
+  }"
+done

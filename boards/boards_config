@@ -1,0 +1,61 @@
+# [board_arch]
+# cc             = Cross compiler prefix. Ex: aarch64-linux-gnu-
+# cc_path        = Cross compiler folder inside the bin_folder. Ex: gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu
+# kernel_target  = Linux kernel make target for the kernel image. Ex: Image or Image.gz
+# kernel_file    = Filename expected inside /boot/. Ex: kernel8.img
+# config_file    = Default config file used to configure the kernel
+# config_target  = Make target used to configure the kernel
+# overlay_path   = Overlays path inside /boot/
+# vendor         = Vendor name, like broadcom. If set the contents of arch/ARCH/boot/dts/VENDOR will be copied into /boot (Raspberry Pi style)
+# dtb_path       = Device tree binary folder inside /boot where dtbs will be copied
+# ramfs_file     = File name for the initramfs file inside /boot
+# update_ramfs   = Command used to create the initramfs file, where $ramfs_file will be replaced by ramfs_file and $version by the kernel version
+# on             = Command line used to turn this board on
+# off            = Command line used to turn this board off
+# pkg_folder     = Folder PKGBUILD files necessary to build the Arch Linux Kernel package
+
+[pi4_arm64]
+cc             = aarch64-linux-gnu-
+cc_path        = ~/.local/bin/gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu/bin
+kernel_target  = Image
+kernel_file    = kernel8.img
+config_file    = $kdt_boards/pi4_arm64_defconfig
+vendor         = broadcom
+overlay_path   = overlays
+
+[rk3399_arm64]
+cc             = aarch64-linux-gnu-
+cc_path        = ~/.local/bin/gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu/bin
+kernel_target  = Image
+kernel_file    = Image-devel
+dtb_path       = dtbs_devel
+ramfs_file     = initramfs-linux-devel.img
+config_file    = $kdt_boards/rk3399_arm64_defconfig
+pkg_folder     = $kdt_boards/generic_pkgbuild
+update_ramfs   = mkinitcpio -k $version -g $ramfs_file
+on             = kasa --alias Strip_9BA6 --type strip on --name P2
+off            = kasa --alias Strip_9BA6 --type strip off --name P2
+
+[vim3_arm64]
+cc             = aarch64-linux-gnu-
+cc_path        = ~/.local/bin/gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu/bin
+kernel_target  = Image
+kernel_file    = Image-devel
+dtb_path       = dtbs_devel
+config_file    = $kdt_boards/vim3_arm64_defconfig
+ramfs_file     = initramfs-linux-devel.img
+update_ramfs   = mkinitcpio -k $version -g $ramfs_file
+on             = kasa --alias Strip_9BA6 --type strip on --name P2
+off            = kasa --alias Strip_9BA6 --type strip off --name P2
+
+[vim4_arm64]
+cc             = aarch64-none-linux-gnu-
+cc_path        = ~/.local/bin/gcc-arm-10.3-2021.07-x86_64-aarch64-none-linux-gnu/bin
+kernel_target  = Image
+kernel_file    = Image-devel
+dtb_path       = dtbs_devel
+config_file    = $kdt_boards/vim4_arm64_defconfig
+ramfs_file     = initramfs-linux-devel.img
+update_ramfs   = mkinitcpio -k $version -g $ramfs_file
+on             = kasa --alias Strip_9BA6 --type strip on --name P2
+off            = kasa --alias Strip_9BA6 --type strip off --name P2
